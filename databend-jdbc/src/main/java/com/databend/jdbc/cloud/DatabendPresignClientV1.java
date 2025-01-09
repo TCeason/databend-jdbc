@@ -25,6 +25,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static com.databend.client.ClientSettings.X_DATABEND_RELATIVE_PATH;
+import static com.databend.client.ClientSettings.X_DATABEND_STAGE_NAME;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -53,8 +55,8 @@ public class DatabendPresignClientV1 implements DatabendPresignClient {
                 .addFormDataPart("upload", name, new InputStreamRequestBody(null, inputStream, fileSize))
                 .build();
         Headers headers = new Headers.Builder()
-                .add("stage_name", stageName)
-                .add("relative_path", relativePath)
+                .add(X_DATABEND_STAGE_NAME, stageName)
+                .add(X_DATABEND_RELATIVE_PATH, relativePath)
                 .build();
 
         HttpUrl url = HttpUrl.get(this.uri);
@@ -84,7 +86,7 @@ public class DatabendPresignClientV1 implements DatabendPresignClient {
         try {
             executeInternal(r, true);
         } catch (IOException e) {
-            throw new IOException(format(" uploadFromStream failed, file size is %s,  presignUrl is %s kb, error is %s", fileSize / 1024.0, presignedUrl, e.toString()));
+            throw new IOException(format(" uploadFromStream failed, file size is %s kb, error is %s", fileSize / 1024.0, presignedUrl, e.toString()));
         }
     }
 

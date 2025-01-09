@@ -23,13 +23,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.databend.client.ClientSettings.*;
 
 @Test(timeOut = 10000)
 public class TestClientIT {
+    static String port = System.getenv("DATABEND_TEST_CONN_PORT") != null ? System.getenv("DATABEND_TEST_CONN_PORT").trim() : "8000";
+
     // please setup a local databend cluster before running this test, and create databend
-    private static final String DATABEND_HOST = "http://databend:databend@127.0.0.1:8000";
+    private static final String DATABEND_HOST = "http://databend:databend@127.0.0.1:" + port;
     private static final String DATABASE = "default";
 
     @Test(groups = {"it"})
@@ -37,7 +40,8 @@ public class TestClientIT {
         OkHttpClient client = new OkHttpClient.Builder().addInterceptor(OkHttpUtils.basicAuthInterceptor("databend", "databend")).build();
 
         ClientSettings settings = new ClientSettings(DATABEND_HOST);
-        DatabendClient cli = new DatabendClientV1(client, "select 1", settings, null);
+        AtomicReference<String> lastNodeID = new AtomicReference<>();
+        DatabendClient cli = new DatabendClientV1(client, "select 1", settings, null, lastNodeID);
         System.out.println(cli.getResults().getData());
         Assert.assertEquals(cli.getQuery(), "select 1");
         Assert.assertEquals(cli.getSession().getDatabase(), DATABASE);
@@ -55,8 +59,10 @@ public class TestClientIT {
         OkHttpClient client = new OkHttpClient.Builder().addInterceptor(OkHttpUtils.basicAuthInterceptor("databend", "databend")).build();
         ClientSettings settings = new ClientSettings("http://localhost:13191");
 
+        AtomicReference<String> lastNodeID = new AtomicReference<>();
+
         try {
-            DatabendClient cli = new DatabendClientV1(client, "select 1", settings, null);
+            DatabendClient cli = new DatabendClientV1(client, "select 1", settings, null, lastNodeID);
             cli.getResults(); // This should trigger the connection attempt
             Assert.fail("Expected exception was not thrown");
         } catch (Exception e) {
@@ -71,11 +77,12 @@ public class TestClientIT {
     public void testBasicQueryIDHeader() {
         OkHttpClient client = new OkHttpClient.Builder().addInterceptor(OkHttpUtils.basicAuthInterceptor("databend", "databend")).build();
         String expectedUUID = UUID.randomUUID().toString();
+        AtomicReference<String> lastNodeID = new AtomicReference<>();
 
         Map<String, String> additionalHeaders = new HashMap<>();
         additionalHeaders.put(X_Databend_Query_ID, expectedUUID);
         ClientSettings settings = new ClientSettings(DATABEND_HOST, DatabendSession.createDefault(), DEFAULT_QUERY_TIMEOUT, DEFAULT_CONNECTION_TIMEOUT, DEFAULT_SOCKET_TIMEOUT, PaginationOptions.defaultPaginationOptions(), additionalHeaders, null, DEFAULT_RETRY_ATTEMPTS);
-        DatabendClient cli = new DatabendClientV1(client, "select 1", settings, null);
+        DatabendClient cli = new DatabendClientV1(client, "select 1", settings, null, lastNodeID);
         Assert.assertEquals(cli.getAdditionalHeaders().get(X_Databend_Query_ID), expectedUUID);
 
         String expectedUUID1 = UUID.randomUUID().toString();
@@ -84,7 +91,7 @@ public class TestClientIT {
         ClientSettings settings1 = new ClientSettings(DATABEND_HOST, DatabendSession.createDefault(), DEFAULT_QUERY_TIMEOUT, DEFAULT_CONNECTION_TIMEOUT, DEFAULT_SOCKET_TIMEOUT, PaginationOptions.defaultPaginationOptions(), additionalHeaders1, null, DEFAULT_RETRY_ATTEMPTS);
         Assert.assertEquals(cli.getAdditionalHeaders().get(X_Databend_Query_ID), expectedUUID);
         // check X_Databend_Query_ID won't change after calling next()
-        DatabendClient cli1 = new DatabendClientV1(client, "SELECT number from numbers(200000) order by number", settings1, null);
+        DatabendClient cli1 = new DatabendClientV1(client, "SELECT number from numbers(200000) order by number", settings1, null, lastNodeID);
         for (int i = 1; i < 1000; i++) {
             cli.advance();
             Assert.assertEquals(cli1.getAdditionalHeaders().get(X_Databend_Query_ID), expectedUUID1);

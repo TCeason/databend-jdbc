@@ -31,9 +31,30 @@ jobs:
       - uses: ./.github/actions/setup_databend_cluster
         timeout-minutes: 15
         with:
-          version: '1.2.629-nightly'
+          version: '1.2.661-nightly'
           target: 'x86_64-unknown-linux-gnu'
-      - name: Run Maven clean deploy with release profile
+
+      - name: Test with conn to node 1
         run: mvn test -DexcludedGroups=FLAKY
         env:
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: View Nginx logs
+        run: docker logs nginx-lb
+
+      - name: check nginx
+        run: |
+          curl -u 'databend:databend' -X POST "http://localhost:8010/v1/query" \
+          -H 'Content-Type: application/json' \
+          -d '{"sql": "select 1", "pagination": { "wait_time_secs": 5 }}' || true
+        env:
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: View Nginx logs
+        run: docker logs nginx-lb
+
+      - name: Test with conn to nginx
+        run: mvn test -DexcludedGroups=FLAKY
+        env:
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          DATABEND_TEST_CONN_PORT: 8010

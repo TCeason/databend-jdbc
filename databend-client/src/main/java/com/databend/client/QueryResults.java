@@ -25,10 +25,11 @@ import static com.google.common.base.MoreObjects.toStringHelper;
 
 public class QueryResults {
     private final String queryId;
+    private final String nodeId;
     private final String sessionId;
     private final DatabendSession session;
     private final List<QueryRowField> schema;
-    private final List<List<Object>> data;
+    private final List<List<String>> data;
     private final String state;
     private final QueryErrors error;
     private final QueryStats stats;
@@ -42,10 +43,11 @@ public class QueryResults {
     @JsonCreator
     public QueryResults(
             @JsonProperty("id") String queryId,
+            @JsonProperty("node_id") String nodeId,
             @JsonProperty("session_id") String sessionId,
             @JsonProperty("session") DatabendSession session,
             @JsonProperty("schema") List<QueryRowField> schema,
-            @JsonProperty("data") List<List<Object>> data,
+            @JsonProperty("data") List<List<String>> data,
             @JsonProperty("state") String state,
             @JsonProperty("error") QueryErrors error,
             @JsonProperty("stats") QueryStats stats,
@@ -55,10 +57,11 @@ public class QueryResults {
             @JsonProperty("next_uri") URI nextUri,
             @JsonProperty("kill_uri") URI killUri) {
         this.queryId = queryId;
+        this.nodeId = nodeId;
         this.sessionId = sessionId;
         this.session = session;
         this.schema = schema;
-        this.data = ParseJsonDataUtils.parseRawData(schema, data);
+        this.data = data;
         this.state = state;
         this.error = error;
         this.stats = stats;
@@ -74,6 +77,11 @@ public class QueryResults {
     @JsonProperty
     public String getQueryId() {
         return queryId;
+    }
+
+    @JsonProperty
+    public String getNodeId() {
+        return nodeId;
     }
 
     @JsonProperty
@@ -93,6 +101,11 @@ public class QueryResults {
 
     @JsonProperty
     public List<List<Object>> getData() {
+        return  ParseJsonDataUtils.parseRawData(schema, data);
+    }
+
+    @JsonProperty
+    public List<List<String>> getDataRaw() {
         return data;
     }
 

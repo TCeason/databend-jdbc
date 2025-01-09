@@ -4,7 +4,7 @@ inputs:
   version:
     description: "query and meta service version"
     required: true
-    default: "1.2.629-nightly"
+    default: "1.2.661-nightly"
   target:
     description: ""
     required: true
@@ -29,6 +29,13 @@ runs:
         export AWS_EC2_METADATA_DISABLED=true
 
         aws --endpoint-url http://127.0.0.1:9900/ s3 mb s3://testbucket
+
+    - name: Start Nginx
+      shell: bash
+      run: |
+        docker run -d --network host --name nginx-lb \
+        -v ${{ github.workspace }}/scripts/ci/nginx_rr.conf:/etc/nginx/nginx.conf:ro \
+        nginx
 
     - name: Download binary and extract into target directory
       shell: bash
